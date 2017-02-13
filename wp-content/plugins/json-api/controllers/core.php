@@ -10,11 +10,12 @@ class JSON_API_Core_Controller {
   public function get_posts() {
     global $json_api;
 
-    /*
     $url = parse_url($_SERVER['REQUEST_URI']);
     $defaults = array(
       'ignore_sticky_posts' => true
     );
+
+/*
     $query = wp_parse_args($url['query']);
     unset($query['json']);
     unset($query['post_status']);
