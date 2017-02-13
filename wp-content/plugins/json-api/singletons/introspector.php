@@ -19,6 +19,7 @@ class JSON_API_Introspector {
     }
     return $output;
     */
+    return 'bla';
   }
 
    public function search_posts($query = false, $wp_posts = false) {
