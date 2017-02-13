@@ -7,19 +7,16 @@ class JSON_API_Introspector {
     $this->set_posts_query($query); // array('s' => $query, 'posts_per_page' => 25)
     $output = array();
 
-    /*
     while (have_posts()) {
       the_post();
       if ($wp_posts) {
         $new_post = $post;
       } else {
-        $new_post = new JSON_API_Post($post);
+        $new_post = 'bla' // new JSON_API_Post($post);
       }
       $output[] = $new_post;
     }
     return $output;
-    */
-    return 'bla';
   }
 
    public function search_posts($query = false, $wp_posts = false) {
