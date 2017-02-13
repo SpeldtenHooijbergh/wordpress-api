@@ -14,12 +14,12 @@ class JSON_API_Core_Controller {
     $defaults = array(
       'ignore_sticky_posts' => true
     );
-
-/*
     $query = wp_parse_args($url['query']);
     unset($query['json']);
     unset($query['post_status']);
     $query = array_merge($defaults, $query);
+
+    /*
     $posts = $json_api->introspector->get_posts($query);
     $result = $this->posts_result($posts);
     $result['query'] = $query; */
