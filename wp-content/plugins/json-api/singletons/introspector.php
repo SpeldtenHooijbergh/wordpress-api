@@ -4,24 +4,7 @@ class JSON_API_Introspector {
 
   public function get_posts($query = false, $wp_posts = false) {
     global $post, $wp_query;
-    $this->set_posts_query($query); // array('s' => $query, 'posts_per_page' => 25)
-    $output = array();
-
-    while (have_posts()) {
-      the_post();
-      if ($wp_posts) {
-        $new_post = $post;
-      } else {
-        $new_post = 'bla' // new JSON_API_Post($post);
-      }
-      $output[] = $new_post;
-    }
-    return $output;
-  }
-
-   public function search_posts($query = false, $wp_posts = false) {
-    global $post, $wp_query;
-    $this->set_posts_query(array('s' => $query, 'posts_per_page' => 50,'post_type' => 'post')); //
+    $this->set_posts_query($query);
     $output = array();
     while (have_posts()) {
       the_post();
@@ -29,55 +12,6 @@ class JSON_API_Introspector {
         $new_post = $post;
       } else {
         $new_post = new JSON_API_Post($post);
-      }
-      $output[] = $new_post;
-    }
-    return $output;
-  }
-
-  public function get_other_pages($query) {
-    global $post, $wp_query;
-    $this->set_posts_query(array('s' => $query, 'post_type' => array('page','taak','thema'), 'posts_per_page' => 5));
-    $output = array();
-    while (have_posts()) {
-      the_post();
-      if ($wp_posts) {
-        $new_post = $post;
-      } else {
-        $new_post = new JSON_API_Post($post);
-      }
-      $output[] = $new_post;
-    }
-    return $output;
-  }
-
-  public function get_tagged_posts($tag) {
-    global $post, $wp_query;
-    $this->set_posts_query(array($query, 'tag_in' => $tag, 'post_type' => 'post', 'order' => 'DESC' ));
-    $output = array();
-    while (have_posts()) {
-      the_post();
-      if ($wp_posts) {
-        $new_post = $post;
-      } else {
-        $new_post = new JSON_API_Post($post);
-      }
-      $output[] = $new_post;
-    }
-    return $output;
-  }
-
-  public function get_nieuws() {
-    global $post, $wp_query;
-    // $this->set_posts_query(array($query, 'post_type' => 'post', 'order' => 'DESC', 'posts_per_page' => 24));
-    get_posts(array('post_type' => 'post', 'order' => 'DESC', 'posts_per_page' => 24));
-    $output = array();
-    while (have_posts()) {
-      the_post();
-      if ($wp_posts) {
-        $new_post = $post;
-      } else {
-        $new_post = new JSON_API_SimplePost($post);
       }
       $output[] = $new_post;
     }
@@ -153,8 +87,7 @@ class JSON_API_Introspector {
         $id = $post_id;
       }
       $posts = $this->get_posts(array(
-        'p' => $id,
-        'post_status' => array('publish', 'pending', 'draft', 'auto-draft', 'future', 'private', 'inherit', 'trash')
+        'p' => $id
       ), true);
     } else if ($slug || $post_slug) {
       if (!$slug) {
@@ -305,16 +238,6 @@ class JSON_API_Introspector {
     return $comments;
   }
 
-  public function search_comments($query) {
-    global $wpdb;
-    $args = array ( 'search' => $query, 'number' => 99 );
-    $wp_comments = get_comments($args);
-    foreach ($wp_comments as $wp_comment) {
-      $comments[] = new JSON_API_Comment($wp_comment);
-    }
-    return $comments;
-  }
-
   public function get_attachments($post_id) {
     $wp_attachments = get_children(array(
       'post_type' => 'attachment',
@@ -411,6 +334,7 @@ class JSON_API_Introspector {
       $query['post_type'] = $json_api->query->post_type;
     }
 
+    $query = apply_filters('json_api_query_args', $query);
     if (!empty($query)) {
       query_posts($query);
       do_action('json_api_query', $wp_query);
