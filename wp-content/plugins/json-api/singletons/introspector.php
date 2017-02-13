@@ -6,6 +6,8 @@ class JSON_API_Introspector {
     global $post, $wp_query;
     $this->set_posts_query($query); // array('s' => $query, 'posts_per_page' => 25)
     $output = array();
+
+    /*
     while (have_posts()) {
       the_post();
       if ($wp_posts) {
@@ -16,6 +18,7 @@ class JSON_API_Introspector {
       $output[] = $new_post;
     }
     return $output;
+    */
   }
 
    public function search_posts($query = false, $wp_posts = false) {
