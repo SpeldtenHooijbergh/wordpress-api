@@ -3,7 +3,7 @@
 class JSON_API_Post {
   
   // Note:
-  //   JSON_API_Post objects must no longer be instantiated within The Loop.
+  //   JSON_API_Post objects must be instantiated within The Loop.
   
   var $id;              // Integer
   var $type;            // String
@@ -20,14 +20,11 @@ class JSON_API_Post {
   var $tags;            // Array of objects
   var $author;          // Object
   var $comments;        // Array of objects
-  // var $attachments;     // Array of objects
+  var $attachments;     // Array of objects
   var $comment_count;   // Integer
-  var $card_image;       // String
-  // var $custom_fields;   // Object (included by using custom_fields query var)
-  var $secties;         // JRM : flexible layout content
-  var $cover;
-  var $quote;
-  // var $phases; // JRM : repeating content for planning
+  var $comment_status;  // String ("open" or "closed")
+  var $thumbnail;       // String
+  var $custom_fields;   // Object (included by using custom_fields query var)
   
   function JSON_API_Post($wp_post = null) {
     if (!empty($wp_post)) {
@@ -140,24 +137,19 @@ class JSON_API_Post {
     $this->set_value('title', get_the_title($this->id));
     $this->set_value('title_plain', strip_tags(@$this->title));
     $this->set_content_value();
-    // $this->set_value('excerpt', apply_filters('the_excerpt', get_the_excerpt()));
-    $this->set_value('date', get_the_time('c', $wp_post->ID)); // $this->id
+    $this->set_value('excerpt', apply_filters('the_excerpt', get_the_excerpt()));
+    $this->set_value('date', get_the_time($date_format));
     $this->set_value('modified', date($date_format, strtotime($wp_post->post_modified)));
     $this->set_categories_value();
     $this->set_tags_value();
     $this->set_author_value($wp_post->post_author);
     $this->set_comments_value();
-    // $this->set_attachments_value();
+    $this->set_attachments_value();
     $this->set_value('comment_count', (int) $wp_post->comment_count);
-    // $this->set_value('comment_status', $wp_post->comment_status);
-    $this->set_card_image($wp_post->ID);
-   // $this->set_custom_fields_value($wp_post->ID);
-    $this->set_secties($wp_post->ID);
-   // $this->set_phases();
+    $this->set_value('comment_status', $wp_post->comment_status);
+    $this->set_thumbnail_value();
+    $this->set_custom_fields_value();
     $this->set_custom_taxonomies($wp_post->post_type);
-    $this->set_cover($wp_post->ID);
-    $this->set_quote($wp_post->ID);
-    $this->set_homecontent($wp_post->ID);
     do_action("json_api_import_wp_post", $this, $wp_post);
   }
   
@@ -233,220 +225,57 @@ class JSON_API_Post {
     }
   }
   
-  // function set_attachments_value() {
-  //   global $json_api;
-  //   if ($json_api->include_value('attachments')) {
-  //     $this->attachments = $json_api->introspector->get_attachments($this->id);
-  //   } else {
-  //     unset($this->attachments);
-  //   }
-  // }
-
-  function set_cover($id) {
+  function set_attachments_value() {
     global $json_api;
-    $bannerId = get_field('banner',$id);
-    $this->cover =  $json_api->introspector->get_attachment($bannerId);
-
-  }
-
-  function set_quote($id) {
-    global $json_api;
-    if (get_field('citaat',$id) ) { 
-    
-      $this->quote = strip_tags(get_field('citaat',$id));
-
+    if ($json_api->include_value('attachments')) {
+      $this->attachments = $json_api->introspector->get_attachments($this->id);
     } else {
-
-      $this->quote = ''; 
+      unset($this->attachments);
     }
-
   }
   
-  function set_card_image($id) {
+  function set_thumbnail_value() {
     global $json_api;
-    // if (!$json_api->include_value('thumbnail') ||
-    //     !function_exists('get_post_thumbnail_id')) {
-    //   unset($this->thumbnail);
-    //   return;
-    // }
-    $attachment_id = get_post_thumbnail_id($id);
-
-    // if there is no featured image , use the first attachment
+    if (!$json_api->include_value('thumbnail') ||
+        !function_exists('get_post_thumbnail_id')) {
+      unset($this->thumbnail);
+      return;
+    }
+    $attachment_id = get_post_thumbnail_id($this->id);
     if (!$attachment_id) {
-
-      $attachments = $json_api->introspector->get_attachments($id);
-
-      if ($attachments) {   
-        $attachment_id = $attachments[0]->id; 
-      }
+      unset($this->thumbnail);
+      return;
     }
-    if ($attachment_id) {  
-      $this->card_image = $json_api->introspector->get_attachment($attachment_id);
+    $thumbnail_size = $this->get_thumbnail_size();
+    $this->thumbnail_size = $thumbnail_size;
+    $attachment = $json_api->introspector->get_attachment($attachment_id);
+    $image = $attachment->images[$thumbnail_size];
+    $this->thumbnail = $image->url;
+    $this->thumbnail_images = $attachment->images;
+  }
+  
+  function set_custom_fields_value() {
+    global $json_api;
+    if ($json_api->include_value('custom_fields')) {
+      $wp_custom_fields = get_post_custom($this->id);
+      $this->custom_fields = new stdClass();
+      if ($json_api->query->custom_fields) {
+        $keys = explode(',', $json_api->query->custom_fields);
+      }
+      foreach ($wp_custom_fields as $key => $value) {
+        if ($json_api->query->custom_fields) {
+          if (in_array($key, $keys)) {
+            $this->custom_fields->$key = $wp_custom_fields[$key];
+          }
+        } else if (substr($key, 0, 1) != '_') {
+          $this->custom_fields->$key = $wp_custom_fields[$key];
+        }
+      }
+    } else {
+      unset($this->custom_fields);
     }
   }
   
-  function set_secties($id) {
-    global $json_api;
-    $sectie = 0;
-    $this->secties = new stdClass();
-    if(have_rows('sectie',$id)) : 
-      while ( have_rows('sectie',$id) ) : the_row();
-
-        $type = get_row_layout();
-
-        if( $type == 'paragraaf' ):
-          $this->secties->$sectie->type = 'paragraaf';
-          $paragraaf = get_sub_field('paragraaf');
-          $this->secties->$sectie->tekst = $paragraaf;
-        elseif( $type == 'hoofdstuk' ):
-          $this->secties->$sectie->type = 'hoofdstuk';
-          $titel = get_sub_field('titel');
-          $this->secties->$sectie->titel = $titel;
-          $this->secties->$sectie->slug = sanitize_title($titel);
-        elseif( $type == 'grote_foto' ):
-          $this->secties->$sectie->type = 'grote_foto';
-          $afbeelding = get_sub_field('afbeelding');
-          $this->secties->$sectie->afbeelding = $afbeelding;
-        elseif( $type == 'foto_links' ):
-          $this->secties->$sectie->type = 'foto_links';
-          $afbeelding = get_sub_field('afbeelding');
-         //  $this->secties->$sectie->afbeelding = $json_api->introspector->get_attachment($afbeelding->id);
-          $this->secties->$sectie->afbeelding = $afbeelding;
-        elseif( $type == 'foto_rechts' ):
-          $this->secties->$sectie->type = 'foto_rechts';
-          $afbeelding = get_sub_field('afbeelding');
-          $this->secties->$sectie->afbeelding = $afbeelding;
-        elseif( $type == 'foto_combi' ):
-          $this->secties->$sectie->type = 'foto_combi';
-          $afbeelding1 = get_sub_field('afbeelding1');
-          $this->secties->$sectie->afbeelding1 = $afbeelding1;
-          $afbeelding2 = get_sub_field('afbeelding2');
-          $this->secties->$sectie->afbeelding2 = $afbeelding2;
-        elseif( $type == 'foto_combi_2' ):
-          $this->secties->$sectie->type = 'foto_combi_2';
-          $afbeelding1 = get_sub_field('afbeelding1');
-          $this->secties->$sectie->afbeelding1 = $afbeelding1;
-          $afbeelding2 = get_sub_field('afbeelding2');
-          $this->secties->$sectie->afbeelding2 = $afbeelding2;
-        elseif( $type == 'foto_combi_3' ):
-          $this->secties->$sectie->type = 'foto_combi_gelijk';
-          $afbeelding1 = get_sub_field('afbeelding1');
-          $this->secties->$sectie->afbeelding1 = $afbeelding1;
-          $afbeelding2 = get_sub_field('afbeelding2');
-          $this->secties->$sectie->afbeelding2 = $afbeelding2;
-        elseif( $type == 'video' ):
-          $this->secties->$sectie->type = 'video';
-          $youtube_no = get_sub_field('youtube');
-          $youtube_url = 'http://www.youtube.com/embed/' . $youtube_no . '/?autoplay=1';
-          $this->secties->$sectie->youtube_url = $youtube_url;
-          $this->secties->$sectie->youtube_id = $youtube_no;
-          $vimeo_no = get_sub_field('vimeo');
-          $vimeo_url = 'https://player.vimeo.com/video/' . $vimeo_no;
-          $hash = unserialize(file_get_contents('http://vimeo.com/api/v2/video/' . $vimeo_no .'.php'));
-          $this->secties->$sectie->vimeo = $vimeo_url; 
-          $this->secties->$sectie->vimeo_id = $vimeo_no; 
-          $this->secties->$sectie->vimeo_meta = $hash;
-          $webcam = get_sub_field('webcam');
-          $this->secties->$sectie->webcam = $webcam; 
-          $iframe = get_sub_field('iframe');
-          $this->secties->$sectie->iframe = $iframe; 
-        // elseif( $type == 'grafiek' ):
-        //   $this->secties->$sectie->type = 'grafiek';
-        //   $file = get_sub_field('file');
-        //   $path = substr($file, strpos($file,'wp-content') + 11);
-        //   $pathtwo = preg_replace('/\.[^.]+$/','',$path);
-        //   $this->secties->$sectie->file = $pathtwo;
-        //   $grafieksoort = get_sub_field('grafieksoort');
-        //   $this->secties->$sectie->grafieksoort = $grafieksoort; 
-        //   $tekst = get_sub_field('tekst');
-        //   $this->secties->$sectie->tekst = $tekst;
-        //   $taak = get_sub_field('taak');
-        //   $this->secties->$sectie->taak = $taak;
-        //   $data_id = get_sub_field('data_id');
-        //   $this->secties->$sectie->data_id = $data_id;
-        // elseif( $type == 'fotomorph' ):
-        //   $this->secties->$sectie->type = 'fotomorph';
-        //   $foto_oud = get_sub_field('foto_oud');
-        //   $this->secties->$sectie->foto_oud = $foto_oud;
-        //   $foto_nieuw = get_sub_field('foto_nieuw');
-        //   $this->secties->$sectie->foto_nieuw = $foto_nieuw;
-
-
-        endif;
-        $sectie++;
-      endwhile;   
-    endif;  
-
-  }
-    
-  function set_phases() {
-    global $json_api;
-    $phase = 0;
-    if(have_rows('fase')) : 
-      while ( have_rows('fase') ) : the_row();
-
-        $title = get_sub_field('naam');
-        $status = get_sub_field('status');
-        $start = get_sub_field('startdatum');
-        $end = get_sub_field('einddatum');
-        $description = get_sub_field('omschrijving');
-        $location = get_sub_field('locatie');
-        $posts = [];
-        $rij = get_sub_field('rij');
-        $cat = get_sub_field('style');
-        $labelPosition = get_sub_field('labelpositie');
-
-        if(have_rows('nieuwsberichten')) : 
-
-          while ( have_rows('nieuwsberichten') ) : the_row();
-
-            $post = get_sub_field('bericht');
-
-            $attached_post = [];
-
-            $attached_post['title'] = $post->post_title; 
-            $attached_post['author_id'] = $post->post_author;
-            $attached_post['author'] = new JSON_API_Author($post->post_author);
-            $attached_post['slug'] = $post->post_name;
-            $attached_post['date'] = get_the_time('c', $post->ID);
-            $attached_post['comment_count'] = $post->comment_count; 
-            $thumb = wp_get_attachment_image_src( get_post_thumbnail_id($post->ID), 'thumb_klein' );
-            $attached_post['thumbnail'] = $thumb['0']; 
-
-            array_push($posts, $attached_post);
-
-          endwhile;
-
-        endif;
-
-        $this->phases->$phase->title = $title; 
-        $this->phases->$phase->status = $status;
-        $this->phases->$phase->start = $start;
-        $this->phases->$phase->end = $end;
-        $this->phases->$phase->description = $description;
-        $this->phases->$phase->location = $location;
-        $this->phases->$phase->posts = $posts;
-        $this->phases->$phase->rij = $rij;
-        $this->phases->$phase->cat = $cat;
-        $this->phases->$phase->labelPosition = $labelPosition;
-
-        $phase++;
-
-      endwhile;   
-    endif; 
-
-  }
-
-  function set_homecontent($id) {
-    global $json_api;
-
-      $this->homecontent->beeld = get_field('beeld');
-      $this->homecontent->aankeiler = get_field('aankeiler');
-      $this->homecontent->seodescription = get_field('description_voor_google');
-
-
-   }
-
   function set_custom_taxonomies($type) {
     global $json_api;
     $taxonomies = get_taxonomies(array(
