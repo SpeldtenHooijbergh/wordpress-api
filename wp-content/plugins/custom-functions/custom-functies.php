@@ -16,10 +16,8 @@ Version: 0.1
 	
 	include 'lib/cors.php';
 	include 'lib/publish_hooks.php';
-	include 'lib/images.php';
-	// include 'lib/fields-storytelling.php';
-	//include 'lib/api-storytelling.php';
-	// include 'lib/preview.php';
+	// include 'lib/images.php';
+
 
 
 	function allow_br() {
