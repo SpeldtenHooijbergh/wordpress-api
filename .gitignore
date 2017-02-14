@@ -3,6 +3,7 @@
 wp-admin/*
 wp-content/*
 wp-includes/*
+!wp-content/plugins/
 index.php
 licence.txt
 readme.html
@@ -20,4 +21,4 @@ wp-signup.php
 wp-trackback.php
 xmlrpc.php
 
-!wp-content/plugins/*
+
