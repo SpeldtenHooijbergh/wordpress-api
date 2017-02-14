@@ -2,8 +2,12 @@
 !/.gitignore
 wp-admin/*
 wp-content/*
-wp-includes/*
 !wp-content/plugins/
+wp-content/plugins/*
+!wp-content/plugins/custom-functions
+!wp-content/plugins/json-api
+wp-includes/*
+
 index.php
 licence.txt
 readme.html
