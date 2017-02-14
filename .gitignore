@@ -4,7 +4,7 @@ wp-admin/*
 wp-content/*
 wp-includes/*
 index.php
-licence.text
+licence.txt
 readme.html
 wp-activate.php
 wp-blog-header.php
@@ -20,5 +20,5 @@ wp-signup.php
 wp-trackback.php
 xmlrpc.php
 
-!wp-content/plugins/custom-functions
-!wp-content/plugins/json-api
+!wp-content/plugins/custom-functions/*
+!wp-content/plugins/json-api/*
